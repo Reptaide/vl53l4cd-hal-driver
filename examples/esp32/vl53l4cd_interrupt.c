@@ -15,9 +15,6 @@
 #include "vl53l4cd_core.h"
 #include "vl53l4cd_platform.h"
 
-#include <stdint.h>
-#include <stdio.h>
-
 #define I2C_DEFAULT_ADDRESS 0x29 // Indirizzo I2C di default all'avvio
 #define I2C_PORT I2C_NUM_0       // Numero porta I2C
 #define I2C_PIN_SCL 10           // SCL
@@ -29,12 +26,7 @@
 
 // Definisce il tag per il debugging
 static const char *TAG = "main";
-
-// Coda per i dati dei sensori
-static QueueHandle_t vl53l4cd_sensor_queue = NULL;
-
-// Handler del bus I2C
-i2c_master_bus_handle_t bus_handle;
+static TaskHandle_t vl53l4cd_task_handle = NULL;
 
 /**
  * @brief Inizializza e configura il bus I2C.
@@ -68,45 +60,48 @@ void i2c_bus_init(i2c_master_bus_handle_t *i2c_bus_handle)
 void vl53l4cd_task(void *arg)
 {
     vl53l4cd_err_t status = VL53L4CD_ERR_OK;
-    vl53l4cd_t *device = NULL;
+
+    vl53l4cd_t *device = (vl53l4cd_t *)arg;
     vl53l4cd_result_t result;
 
     for (;;)
     {
-        if (xQueueReceive(vl53l4cd_sensor_queue, &device, portMAX_DELAY))
-        {
-            // Ottiene i risultati della misurazione
-            status = vl53l4cd_get_result(device, &result);
+        // Attende la notifica dall'ISR
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-            if (status == VL53L4CD_ERR_OK && result.range_status == 0)
-                ESP_LOGI(TAG,
-                    "[%p] Distance: %6u, Signal: %6u",
-                    device,
-                    result.distance_mm,
-                    result.signal_per_spad_kcps);
-            else
-                ESP_LOGD(TAG, "[%p] Status: %u", device, result.range_status);
+        // Ottiene i risultati della misurazione
+        status = vl53l4cd_get_result(device, &result);
 
-            // Elimina l'interrupt pendente
-            vl53l4cd_clear_interrupt(device);
-        }
+        if (status == VL53L4CD_ERR_OK && result.range_status == 0)
+            ESP_LOGI(TAG,
+                "[%p] Distance: %6u, Signal: %6u",
+                device,
+                result.distance_mm,
+                result.signal_per_spad_kcps);
+        else
+            ESP_LOGD(TAG, "[%p] Status: %u", device, result.range_status);
+
+        // Elimina l'interrupt pendente
+        vl53l4cd_clear_interrupt(device);
     }
 }
 
 /**
- * @brief Callback agnostica richiamata dall'ISR per notificare un task.
+ * @brief ISR callback applicativa utilizzata per notificare un task FreeRTOS. Viene
+ * richiamata dal driver al verificarsi di un interrupt hardware del sensore VL53L4CD.
  *
- * @param[in] device Contiene il puntatore al dispositivo.
+ * @param[in] device   Dispositivo VL53L4CD che ha generato l'interrupt.
+ * @param[in] context  Contesto utente contenente il TaskHandle_t del task.
  */
-void IRAM_ATTR vl53l4cd_isr_callback(vl53l4cd_t *device)
+static void IRAM_ATTR vl53l4cd_isr_handler(vl53l4cd_t *device, void *context)
 {
     BaseType_t high_task_wakeup = pdFALSE;
 
-    // Passa il puntatore del dispositivo alla coda FreeRTOS
-    xQueueSendFromISR(vl53l4cd_sensor_queue, &device, &high_task_wakeup);
+    TaskHandle_t task_handle = (TaskHandle_t)context;
 
-    if (high_task_wakeup == pdTRUE)
-        portYIELD_FROM_ISR();
+    vTaskNotifyGiveFromISR(task_handle, &high_task_wakeup);
+
+    portYIELD_FROM_ISR(high_task_wakeup);
 }
 
 void app_main(void)
@@ -140,14 +135,11 @@ void app_main(void)
     // Installa nella IRAM il servizio di interrupt GPIO globale
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_IRAM));
 
-    // Crea la coda per accogliere gli interrupt
-    vl53l4cd_sensor_queue = xQueueCreate(10, sizeof(vl53l4cd_t *));
-
     // Crea il task per gestire l'evento del sensore
-    xTaskCreate(vl53l4cd_task, "vl53l4cd_task", 4096, NULL, 5, NULL);
+    xTaskCreate(vl53l4cd_task, "vl53l4cd_task", 4096, &device, 5, &vl53l4cd_task_handle);
 
-    // Registra la callback dell'interrupt (chiamare prima di vl53l4cd_hal_setup_int)
-    vl53l4cd_register_isr_callback(&device, vl53l4cd_isr_callback);
+    // Registra la ISR callback e associa il task da notificare all'interrupt
+    vl53l4cd_set_isr_handler(&device, vl53l4cd_isr_handler, (void *)vl53l4cd_task_handle);
 
     // Configura il pin di interrupt
     vl53l4cd_hal_setup_int(&device, INT_PIN);

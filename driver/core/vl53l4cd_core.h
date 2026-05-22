@@ -13,7 +13,6 @@
 #ifndef VL53L4CD_CORE_H
 #define VL53L4CD_CORE_H
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -52,7 +51,7 @@ extern "C"
     typedef vl53l4cd_err_t (*vl53l4cd_update_address_t)(void *handle, const uint8_t address);
     typedef vl53l4cd_err_t (*vl53l4cd_gpio_set_level_t)(const uint8_t pin, const uint8_t level);
     typedef void (*vl53l4cd_time_delay_t)(const uint32_t ms);
-    typedef void (*vl53l4cd_isr_callback_t)(vl53l4cd_t *device);
+    typedef void (*vl53l4cd_isr_handler_t)(vl53l4cd_t *device, void *context);
 
     /**
      * @brief La struttura contiene le funzioni per comunicare con l'hardware.
@@ -74,16 +73,16 @@ extern "C"
      */
     struct vl53l4cd_t
     {
-        void *i2c_bus_handle;                 // Handler del bus I2C
-        void *i2c_device_handle;              // Handler dispositivo I2C
-        uint8_t i2c_address;                  // Indirizzo I2C del dispositivo
-        uint32_t i2c_scl_speed;               // Velocità clock I2C
-        uint16_t i2c_timeout;                 // Timeout I2C del dispositivo
-        int8_t xshut_pin;                     // Pin per l'alimentazione
-        int8_t int_pin;                       // Pin di interrupt
-        void *context;                        // Puntatore generico a servizio dell'applicazione
-        vl53l4cd_isr_callback_t isr_callback; // Funzione chiamata all'arrivo di un interrupt
-        const vl53l4cd_platform_t *platform;  // Puntatore alla struttura platform
+        void *i2c_bus_handle;                // Handler del bus I2C
+        void *i2c_device_handle;             // Handler dispositivo I2C
+        uint8_t i2c_address;                 // Indirizzo I2C del dispositivo
+        uint32_t i2c_scl_speed;              // Velocità clock I2C
+        uint16_t i2c_timeout;                // Timeout I2C del dispositivo
+        int8_t xshut_pin;                    // Pin per l'alimentazione
+        int8_t int_pin;                      // Pin di interrupt
+        void *context;                       // Puntatore generico a servizio dell'applicazione
+        vl53l4cd_isr_handler_t isr_handler;  // Funzione chiamata all'arrivo di un interrupt
+        const vl53l4cd_platform_t *platform; // Puntatore alla struttura platform
     };
 
     /**
@@ -109,13 +108,6 @@ extern "C"
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
     vl53l4cd_err_t vl53l4cd_init_core(vl53l4cd_t *device);
-
-    /** TODO 0000000000000000000000000000000000000000000
-     * @brief Questa funzione rimuove il dispositivo VL53L4CD dal bus I2C e rilascia le risorse.
-     * @param (vl53l4cd_t) *device : Puntatore al sensore VL53L4CD.
-     * @return (vl53l4cd_err_t) status : VL53L4CD_OK se OK.
-     */
-    vl53l4cd_err_t vl53l4cd_free(vl53l4cd_t *device);
 
     /**
      * @brief Dà alimentazione al dispositivo tramite il pin power. Dopo questa chiamata è
@@ -400,15 +392,16 @@ extern "C"
     vl53l4cd_err_t vl53l4cd_clear_interrupt(vl53l4cd_t *device);
 
     /**
-     * @brief Registra la callback chiamata al verificarsi di un interrupt hardware.
+     * @brief Configura la funzione chiamata al verificarsi di un interrupt hardware.
      *
      * @param[in] device                Dispositivo VL53L4CD.
-     * @param[in] callback              Funzione invocata dalla ISR.
+     * @param[in] handler               Funzione invocata dalla ISR.
+     * @param[in] context               Contesto passato alla callback ISR. NULL se inutilizzato.
      * @retval VL53L4CD_ERR_OK          Successo.
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
-    vl53l4cd_err_t vl53l4cd_register_isr_callback(
-        vl53l4cd_t *device, vl53l4cd_isr_callback_t callback);
+    vl53l4cd_err_t vl53l4cd_set_isr_handler(
+        vl53l4cd_t *device, vl53l4cd_isr_handler_t handler, void *context);
 
     /**
      * @brief Esegue una calibrazione dell'offset. Il quale corrisponde alla differenza in

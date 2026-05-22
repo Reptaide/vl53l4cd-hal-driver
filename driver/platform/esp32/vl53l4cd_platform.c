@@ -13,25 +13,23 @@
 #include "driver/i2c_master.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "soc/gpio_num.h"
 #include "vl53l4cd_core.h"
 
-#include <stdint.h>
 #include <string.h>
 
 /**
  * @brief Questa è la funzione che viene chiamata dopo un evento di interrupt.
  *
- * @param[in] arg Recupera il puntatore del dispositivo (passato al momento della registrazione).
+ * @param[in] arg Puntatore generico contenente varie informazioni.
  */
 static void IRAM_ATTR gpio_isr_handler(void *arg)
 {
     vl53l4cd_t *device = (vl53l4cd_t *)arg;
 
-    if (!device || !device->isr_callback)
+    if (!device || !device->isr_handler)
         return;
 
-    device->isr_callback(device);
+    device->isr_handler(device, device->context);
 }
 
 /**
@@ -127,6 +125,15 @@ static vl53l4cd_err_t i2c_write_register(
     return VL53L4CD_ERR_OK;
 }
 
+/**
+ * @brief Implementa la logica per aggiornare a runtime l'indirizzo I2C tramite ESP32.
+ *
+ * @param[in] handle                Dispositivo VL53L4CD.
+ * @param[in] address               Nuovo indirizzo I2C.
+ * @retval VL53L4CD_ERR_OK          Successo.
+ * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
+ * @retval VL53L4CD_ERR_FAIL        Errore durante la ricezione dei dati.
+ */
 static vl53l4cd_err_t update_i2c_address(void *handle, const uint8_t address)
 {
     // Verifica il parametro
@@ -166,14 +173,23 @@ static vl53l4cd_err_t update_i2c_address(void *handle, const uint8_t address)
     return VL53L4CD_ERR_OK;
 }
 
-static vl53l4cd_err_t set_gpio_state(const uint8_t gpio, const uint8_t level)
+/**
+ * @brief Implementa la logica per impostare lo stato logico di un pin tramite ESP32.
+ *
+ * @param[in] pin                   Dispositivo VL53L4CD.
+ * @param[in] value                 Nuovo indirizzo I2C.
+ * @retval VL53L4CD_ERR_OK          Successo.
+ * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
+ * @retval VL53L4CD_ERR_FAIL        Errore durante la ricezione dei dati.
+ */
+static vl53l4cd_err_t set_gpio_state(const uint8_t pin, const uint8_t value)
 {
     // Verifica i parametri
-    if (gpio > GPIO_NUM_MAX || level > 1)
+    if (pin > GPIO_NUM_MAX || value > 1)
         return VL53L4CD_ERR_INVALID_ARG;
 
-    // Imposta il livello logico del GPIO
-    esp_err_t status = gpio_set_level((gpio_num_t)gpio, level);
+    // Imposta il livello logico del pin
+    esp_err_t status = gpio_set_level((gpio_num_t)pin, value);
 
     if (status != ESP_OK)
         return VL53L4CD_ERR_INVALID_ARG;
@@ -237,7 +253,7 @@ vl53l4cd_err_t vl53l4cd_init_hal(vl53l4cd_t *device,
     device->xshut_pin = GPIO_NUM_NC;
     device->int_pin = GPIO_NUM_NC;
     device->context = NULL;
-    device->isr_callback = NULL;
+    device->isr_handler = NULL;
     device->platform = &vl53l4cd_platform;
 
     return VL53L4CD_ERR_OK;

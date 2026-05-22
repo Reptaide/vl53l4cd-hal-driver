@@ -11,12 +11,10 @@
 #include "driver/i2c_master.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/projdefs.h"
 #include "freertos/task.h"
 #include "vl53l4cd_core.h"
 #include "vl53l4cd_platform.h"
-
-#include <stdint.h>
-#include <stdio.h>
 
 #define I2C_DEFAULT_ADDRESS 0x29 // Indirizzo I2C di default all'avvio
 #define I2C_PORT I2C_NUM_0       // Numero porta I2C
@@ -73,45 +71,55 @@ void i2c_bus_init(i2c_master_bus_handle_t *i2c_bus_handle)
  *
  * @param[in] arg Argomento passato al task.
  */
-static void vl53l4cd_task(void *arg)
+void vl53l4cd_task(void *arg)
 {
+    vl53l4cd_err_t status = VL53L4CD_ERR_OK;
+
     vl53l4cd_t *device = NULL;
     vl53l4cd_result_t result;
 
     for (;;)
     {
-        if (xQueueReceive(vl53l4cd_sensor_queue, &device, portMAX_DELAY))
-        {
-            vl53l4cd_err_t status = vl53l4cd_get_result(device, &result);
+        // Attende che l'ISR inserisca un dispositivo nella coda
+        if (xQueueReceive(vl53l4cd_sensor_queue, &device, portMAX_DELAY) != pdTRUE)
+            continue;
 
-            if (status == VL53L4CD_ERR_OK && result.range_status == 0)
-                ESP_LOGI(TAG,
-                    "[0x%02X] Distance: %6u mm | Signal: %6u",
-                    device->i2c_address,
-                    result.distance_mm,
-                    result.signal_per_spad_kcps);
-            else
-                ESP_LOGD(TAG, "[0x%02X] Status: %u", device->i2c_address, result.range_status);
+        // Ottiene i risultati della misurazione
+        status = vl53l4cd_get_result(device, &result);
 
-            vl53l4cd_clear_interrupt(device);
-        }
+        if (status == VL53L4CD_ERR_OK && result.range_status == 0)
+            ESP_LOGI(TAG,
+                "[%p] Distance: %6u, Signal: %6u",
+                device,
+                result.distance_mm,
+                result.signal_per_spad_kcps);
+        else
+            ESP_LOGD(TAG, "[%p] Status: %u", device, result.range_status);
+
+        // Elimina l'interrupt pendente
+        vl53l4cd_clear_interrupt(device);
     }
 }
 
 /**
- * @brief Callback agnostica richiamata dall'ISR per notificare un task.
+ * @brief ISR callback applicativa utilizzata per notificare un task FreeRTOS. Viene
+ * richiamata dal driver al verificarsi di un interrupt hardware del sensore VL53L4CD.
  *
- * @param[in] device Contiene il puntatore al dispositivo.
+ * @param[in] device   Dispositivo VL53L4CD che ha generato l'interrupt.
+ * @param[in] context  Contesto utente contenente il TaskHandle_t del task.
  */
-void IRAM_ATTR vl53l4cd_isr_callback(vl53l4cd_t *device)
+static void IRAM_ATTR vl53l4cd_isr_handler(vl53l4cd_t *device, void *context)
 {
     BaseType_t high_task_wakeup = pdFALSE;
 
-    // Passa il puntatore del dispositivo alla coda FreeRTOS
-    xQueueSendFromISR(vl53l4cd_sensor_queue, &device, &high_task_wakeup);
+    // Recupera l'handle della coda dal contesto
+    QueueHandle_t queue = (QueueHandle_t)context;
 
-    if (high_task_wakeup == pdTRUE)
-        portYIELD_FROM_ISR();
+    // Inserisce il puntatore al dispositivo nella coda.
+    if (queue)
+        xQueueSendFromISR(queue, &device, &high_task_wakeup);
+
+    portYIELD_FROM_ISR(high_task_wakeup);
 }
 
 /**
@@ -175,8 +183,10 @@ void vl53l4cd_init_multiple(i2c_master_bus_handle_t i2c_bus_handle)
             ESP_LOGI(TAG, "Device %u: New I2C address 0x%02X", i, I2C_ADDRESSES[i]);
         }
 
-        // Registra la callback e configura il pin di interrupt
-        vl53l4cd_register_isr_callback(&devices[i], vl53l4cd_isr_callback);
+        // Registra la ISR callback e associa il task da notificare all'interrupt
+        vl53l4cd_set_isr_handler(&devices[i], vl53l4cd_isr_handler, (void *)vl53l4cd_sensor_queue);
+
+        // Configura il pin di interrupt
         vl53l4cd_hal_setup_int(&devices[i], INT_PINS[i]);
 
         // Avvio del ranging (start_ranging include già il clear_interrupt)

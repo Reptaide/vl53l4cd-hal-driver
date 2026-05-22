@@ -12,8 +12,6 @@
 
 #include "vl53l4cd_core.h"
 
-#include <stdint.h>
-
 /**
  * @brief Macro per interrompere l'esecuzione in caso una funzione restituisca un errore.
  */
@@ -1026,13 +1024,15 @@ vl53l4cd_err_t vl53l4cd_clear_interrupt(vl53l4cd_t *device)
     return VL53L4CD_ERR_OK;
 }
 
-vl53l4cd_err_t vl53l4cd_register_isr_callback(vl53l4cd_t *device, vl53l4cd_isr_callback_t callback)
+vl53l4cd_err_t vl53l4cd_set_isr_handler(
+    vl53l4cd_t *device, vl53l4cd_isr_handler_t handler, void *context)
 {
     // Verifica i parametri
-    if (!device || !callback)
+    if (!device || !handler)
         return VL53L4CD_ERR_INVALID_ARG;
 
-    device->isr_callback = callback;
+    device->isr_handler = handler;
+    device->context = context;
 
     return VL53L4CD_ERR_OK;
 }
