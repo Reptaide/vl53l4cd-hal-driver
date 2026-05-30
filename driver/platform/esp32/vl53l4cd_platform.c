@@ -45,7 +45,11 @@ static void IRAM_ATTR gpio_isr_handler(void *arg)
  * @retval VL53L4CD_ERR_TIMEOUT     Timeout raggiunto.
  */
 static vl53l4cd_err_t i2c_read_register(
-    void *handle, const uint16_t reg, const size_t length, uint8_t *data)
+    void *handle,
+    const uint16_t reg,
+    const size_t length,
+    uint8_t *data
+)
 {
     // Verifica i parametri
     if (!handle || !data || length == 0)
@@ -63,12 +67,14 @@ static vl53l4cd_err_t i2c_read_register(
     };
 
     // Invia il comando di scrittura e lettura nel bus I2C
-    status = i2c_master_transmit_receive((i2c_master_dev_handle_t)device->i2c_device_handle,
+    status = i2c_master_transmit_receive(
+        (i2c_master_dev_handle_t)device->i2c_device_handle,
         tx_buffer,
         2,
         data,
         length,
-        device->i2c_timeout);
+        device->i2c_timeout
+    );
 
     if (status == ESP_ERR_TIMEOUT)
         return VL53L4CD_ERR_TIMEOUT;
@@ -92,7 +98,11 @@ static vl53l4cd_err_t i2c_read_register(
  * @retval VL53L4CD_ERR_TIMEOUT     Timeout raggiunto.
  */
 static vl53l4cd_err_t i2c_write_register(
-    void *handle, const uint16_t reg, const size_t length, const uint8_t *data)
+    void *handle,
+    const uint16_t reg,
+    const size_t length,
+    const uint8_t *data
+)
 {
     // Verifica i parametri
     if (!handle || !data || length == 0 || length > 32)
@@ -111,10 +121,12 @@ static vl53l4cd_err_t i2c_write_register(
     // Copia i dati nel buffer
     memcpy(tx_buffer + 2, data, length);
 
-    esp_err_t status = i2c_master_transmit((i2c_master_dev_handle_t)device->i2c_device_handle,
+    esp_err_t status = i2c_master_transmit(
+        (i2c_master_dev_handle_t)device->i2c_device_handle,
         tx_buffer,
         length + 2,
-        device->i2c_timeout);
+        device->i2c_timeout
+    );
 
     if (status == ESP_ERR_TIMEOUT)
         return VL53L4CD_ERR_TIMEOUT;
@@ -160,8 +172,8 @@ static vl53l4cd_err_t update_i2c_address(void *handle, const uint8_t address)
 
     // Aggiunge il sensore con il nuovo indirizzo al bus I2C
     i2c_master_dev_handle_t new_device_handle;
-    status = i2c_master_bus_add_device(
-        device->i2c_bus_handle, &i2c_device_config, &new_device_handle);
+    status =
+        i2c_master_bus_add_device(device->i2c_bus_handle, &i2c_device_config, &new_device_handle);
 
     if (status != ESP_OK)
         return VL53L4CD_ERR_FAIL;
@@ -202,10 +214,7 @@ static vl53l4cd_err_t set_gpio_state(const uint8_t pin, const uint8_t value)
  *
  * @param[in] ms Valore del ritardo in ms.
  */
-static void delay_ms(const uint32_t ms)
-{
-    vTaskDelay(pdMS_TO_TICKS(ms));
-}
+static void delay_ms(const uint32_t ms) { vTaskDelay(pdMS_TO_TICKS(ms)); }
 
 static const vl53l4cd_platform_t vl53l4cd_platform = {
     .i2c_read = i2c_read_register,
@@ -215,11 +224,13 @@ static const vl53l4cd_platform_t vl53l4cd_platform = {
     .delay_ms = delay_ms,
 };
 
-vl53l4cd_err_t vl53l4cd_init_hal(vl53l4cd_t *device,
+vl53l4cd_err_t vl53l4cd_init_hal(
+    vl53l4cd_t *device,
     i2c_master_bus_handle_t bus_handle,
     const uint8_t i2c_address,
     const uint32_t i2c_scl_speed,
-    const int32_t i2c_timeout)
+    const int32_t i2c_timeout
+)
 {
     // Verifica i parametri
     if (!device || !bus_handle)

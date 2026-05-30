@@ -14,10 +14,6 @@
 #include "vl53l4cd_core.h"
 #include "vl53l4cd_platform.h"
 
-#include <inttypes.h>
-#include <stdint.h>
-#include <stdio.h>
-
 #define I2C_DEFAULT_ADDRESS 0x29 // Indirizzo I2C di default
 #define I2C_PORT I2C_NUM_0       // Numero porta I2C
 #define I2C_PIN_SCL 10           // SCL
@@ -89,10 +85,12 @@ void app_main(void)
     uint32_t timing_budget_ms = 0;
     uint32_t inter_measurement_ms = 0;
     vl53l4cd_get_range_timing(&device, &timing_budget_ms, &inter_measurement_ms);
-    ESP_LOGI(TAG,
+    ESP_LOGI(
+        TAG,
         "Timing budget: %u ms | Inter-measurement: %u ms",
         timing_budget_ms,
-        inter_measurement_ms);
+        inter_measurement_ms
+    );
 
     // Ottiene la polarità del pin di interrupt
     uint8_t int_polarity = 0;
@@ -114,10 +112,12 @@ void app_main(void)
     uint16_t sigma_threshold_mm = 0;
     vl53l4cd_get_signal_threshold(&device, &signal_threshold_kcps);
     vl53l4cd_get_sigma_threshold(&device, &sigma_threshold_mm);
-    ESP_LOGI(TAG,
+    ESP_LOGI(
+        TAG,
         "Signal threshold: %u kcps | Sigma threshold: %u mm",
         signal_threshold_kcps,
-        sigma_threshold_mm);
+        sigma_threshold_mm
+    );
 
     // Avvia le misurazioni
     vl53l4cd_start_ranging(&device);
@@ -137,7 +137,8 @@ void app_main(void)
     vl53l4cd_result_t result;
     vl53l4cd_get_result(&device, &result);
 
-    ESP_LOGI(TAG,
+    ESP_LOGI(
+        TAG,
         "Result: Distance: %u mm | Status: %u | Signal: %u kcps/SPAD | "
         "Ambient: %u kcps/SPAD | Sigma: %u mm | SPAD: %u",
         result.distance_mm,
@@ -145,7 +146,8 @@ void app_main(void)
         result.signal_per_spad_kcps,
         result.ambient_per_spad_kcps,
         result.sigma_mm,
-        result.number_of_spad);
+        result.number_of_spad
+    );
 
     // Elimina l'interrupt pendente e termina il ranging
     vl53l4cd_clear_interrupt(&device);

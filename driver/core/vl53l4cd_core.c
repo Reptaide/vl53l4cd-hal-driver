@@ -273,7 +273,7 @@ static vl53l4cd_err_t read_register_32(vl53l4cd_t *device, const uint16_t reg, u
 
     // Combina i byte per ricostruire il dato (big-endian: MSB first)
     *data = ((uint32_t)buffer[0] << 24) | ((uint32_t)buffer[1] << 16) | ((uint32_t)buffer[2] << 8) |
-            (uint32_t)buffer[3];
+        (uint32_t)buffer[3];
 
     return VL53L4CD_ERR_OK;
 }
@@ -574,30 +574,8 @@ vl53l4cd_err_t vl53l4cd_get_result(vl53l4cd_t *device, vl53l4cd_result_t *result
     if (!device || !result)
         return VL53L4CD_ERR_INVALID_ARG;
 
-    uint8_t status_rtn[24] = {255,
-        255,
-        255,
-        5,
-        2,
-        4,
-        1,
-        7,
-        3,
-        0,
-        255,
-        255,
-        9,
-        13,
-        255,
-        255,
-        255,
-        255,
-        10,
-        6,
-        255,
-        255,
-        11,
-        12};
+    uint8_t status_rtn[24] = {255, 255, 255, 5,   2,   4,   1,  7, 3,   0,   255, 255,
+                              9,   13,  255, 255, 255, 255, 10, 6, 255, 255, 11,  12};
 
     // Legge tutti i byte in modo consecutivo (0x89=range_status, 0x97=distance_lsb)
     // Questo approccio è più veloce che leggere singolarmente i registri
@@ -647,7 +625,10 @@ vl53l4cd_err_t vl53l4cd_get_result(vl53l4cd_t *device, vl53l4cd_result_t *result
 }
 
 vl53l4cd_err_t vl53l4cd_get_range_timing(
-    vl53l4cd_t *device, uint32_t *timing_budget_ms, uint32_t *inter_measurement_ms)
+    vl53l4cd_t *device,
+    uint32_t *timing_budget_ms,
+    uint32_t *inter_measurement_ms
+)
 {
     // Verifica i parametri
     if (!device || !timing_budget_ms || !inter_measurement_ms)
@@ -684,9 +665,8 @@ vl53l4cd_err_t vl53l4cd_get_range_timing(
     ms_byte = 0x04 - (ms_byte - 1) - 1;
 
     macro_period_us *= 16;
-    *timing_budget_ms = (((ls_byte + 1) * (macro_period_us >> 6)) -
-                            ((macro_period_us >> 6) >> 1)) >>
-                        12;
+    *timing_budget_ms =
+        (((ls_byte + 1) * (macro_period_us >> 6)) - ((macro_period_us >> 6) >> 1)) >> 12;
 
     if (ms_byte < 12)
         *timing_budget_ms >>= (uint8_t)ms_byte;
@@ -710,7 +690,10 @@ vl53l4cd_err_t vl53l4cd_get_range_timing(
 }
 
 vl53l4cd_err_t vl53l4cd_set_range_timing(
-    vl53l4cd_t *device, const uint32_t timing_budget_ms, const uint32_t inter_measurement_ms)
+    vl53l4cd_t *device,
+    const uint32_t timing_budget_ms,
+    const uint32_t inter_measurement_ms
+)
 {
     // Verifica i parametri
     if (!device || timing_budget_ms < 10 || timing_budget_ms > 200)
@@ -726,11 +709,9 @@ vl53l4cd_err_t vl53l4cd_set_range_timing(
     {
         timing_budget_us = timing_budget_ms * 1000;
 
-        macro_period_us = (uint32_t)((uint32_t)2304 *
-                                     ((uint32_t)0x40000000 / (uint32_t)osc_frequency)) >>
-                          6;
-    }
-    else
+        macro_period_us =
+            (uint32_t)((uint32_t)2304 * ((uint32_t)0x40000000 / (uint32_t)osc_frequency)) >> 6;
+    } else
     {
         return VL53L4CD_ERR_INVALID_ARG;
     }
@@ -751,12 +732,12 @@ vl53l4cd_err_t vl53l4cd_set_range_timing(
         inter_measurement_factor *= (float)inter_measurement_ms * (float)clock_pll;
 
         VL53L4CD_ERROR_CHECK(
-            write_register_32(device, REG_INTERMEASUREMENT_MS, (uint32_t)inter_measurement_factor));
+            write_register_32(device, REG_INTERMEASUREMENT_MS, (uint32_t)inter_measurement_factor)
+        );
 
         timing_budget_us -= 4300;
         timing_budget_us /= 2;
-    }
-    else
+    } else
     {
         return VL53L4CD_ERR_INVALID_ARG;
     }
@@ -859,7 +840,11 @@ vl53l4cd_err_t vl53l4cd_set_xtalk(vl53l4cd_t *device, uint16_t xtalk_kcps)
 }
 
 vl53l4cd_err_t vl53l4cd_get_detection_thresholds(
-    vl53l4cd_t *device, uint16_t *low_dist_mm, uint16_t *high_dist_mm, uint8_t *window)
+    vl53l4cd_t *device,
+    uint16_t *low_dist_mm,
+    uint16_t *high_dist_mm,
+    uint8_t *window
+)
 {
     // Verifica i parametri
     if (!device || !low_dist_mm || !high_dist_mm || !window)
@@ -883,10 +868,12 @@ vl53l4cd_err_t vl53l4cd_get_detection_thresholds(
     return VL53L4CD_ERR_OK;
 }
 
-vl53l4cd_err_t vl53l4cd_set_detection_thresholds(vl53l4cd_t *device,
+vl53l4cd_err_t vl53l4cd_set_detection_thresholds(
+    vl53l4cd_t *device,
     const uint16_t low_dist_mm,
     const uint16_t high_dist_mm,
-    const uint8_t window)
+    const uint8_t window
+)
 {
     // Verifica i parametri
     if (!device || high_dist_mm > 1200 || low_dist_mm > high_dist_mm || window > 3)
@@ -1025,7 +1012,10 @@ vl53l4cd_err_t vl53l4cd_clear_interrupt(vl53l4cd_t *device)
 }
 
 vl53l4cd_err_t vl53l4cd_set_isr_handler(
-    vl53l4cd_t *device, vl53l4cd_isr_handler_t handler, void *context)
+    vl53l4cd_t *device,
+    vl53l4cd_isr_handler_t handler,
+    void *context
+)
 {
     // Verifica i parametri
     if (!device || !handler)
@@ -1037,10 +1027,12 @@ vl53l4cd_err_t vl53l4cd_set_isr_handler(
     return VL53L4CD_ERR_OK;
 }
 
-vl53l4cd_err_t vl53l4cd_calibrate_offset(vl53l4cd_t *device,
+vl53l4cd_err_t vl53l4cd_calibrate_offset(
+    vl53l4cd_t *device,
     const int16_t target_dist_mm,
     const uint8_t nb_samples,
-    int16_t *measured_offset_mm)
+    int16_t *measured_offset_mm
+)
 {
     // Verifica i parametri
     if (!device || !measured_offset_mm || target_dist_mm < 50 || target_dist_mm > 1000 ||
@@ -1112,10 +1104,12 @@ vl53l4cd_err_t vl53l4cd_calibrate_offset(vl53l4cd_t *device,
     return VL53L4CD_ERR_OK;
 }
 
-vl53l4cd_err_t vl53l4cd_calibrate_xtalk(vl53l4cd_t *device,
+vl53l4cd_err_t vl53l4cd_calibrate_xtalk(
+    vl53l4cd_t *device,
     const int16_t target_dist_mm,
     const uint8_t nb_samples,
-    uint16_t *measured_xtalk_kcps)
+    uint16_t *measured_xtalk_kcps
+)
 {
     // Verifica i parametri
     if (!device || !measured_xtalk_kcps || target_dist_mm < 50 || target_dist_mm > 1000 ||
@@ -1182,7 +1176,7 @@ vl53l4cd_err_t vl53l4cd_calibrate_xtalk(vl53l4cd_t *device,
     average_signal /= (float)nb_samples;
 
     tmp_xtalk = 512.0f * (average_signal * (1.0f - (average_distance / (float)target_dist_mm))) /
-                average_spad_nb;
+        average_spad_nb;
     cal_xtalk = (uint16_t)tmp_xtalk;
     *measured_xtalk_kcps = (uint16_t)(cal_xtalk * 1000) >> 9;
 

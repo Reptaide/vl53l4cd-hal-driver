@@ -88,11 +88,13 @@ void vl53l4cd_task(void *arg)
         status = vl53l4cd_get_result(device, &result);
 
         if (status == VL53L4CD_ERR_OK && result.range_status == 0)
-            ESP_LOGI(TAG,
+            ESP_LOGI(
+                TAG,
                 "[%p] Distance: %6u, Signal: %6u",
                 device,
                 result.distance_mm,
-                result.signal_per_spad_kcps);
+                result.signal_per_spad_kcps
+            );
         else
             ESP_LOGD(TAG, "[%p] Status: %u", device, result.range_status);
 
@@ -140,7 +142,12 @@ void vl53l4cd_init_multiple(i2c_master_bus_handle_t i2c_bus_handle)
 
         // Inizializza il platform per comunicare con l'hardware
         vl53l4cd_init_hal(
-            &devices[i], i2c_bus_handle, I2C_DEFAULT_ADDRESS, I2C_SCL_SPEED_HZ, I2C_TIMEOUT);
+            &devices[i],
+            i2c_bus_handle,
+            I2C_DEFAULT_ADDRESS,
+            I2C_SCL_SPEED_HZ,
+            I2C_TIMEOUT
+        );
 
         // Configura il pin di alimentazione
         vl53l4cd_hal_setup_xshut(&devices[i], XSHUT_PINS[i]);
@@ -192,11 +199,13 @@ void vl53l4cd_init_multiple(i2c_master_bus_handle_t i2c_bus_handle)
         // Avvio del ranging (start_ranging include già il clear_interrupt)
         vl53l4cd_start_ranging(&devices[i]);
 
-        ESP_LOGI(TAG,
+        ESP_LOGI(
+            TAG,
             "Device %u: started at 0x%02X (INT_PIN %u)",
             i,
             devices[i].i2c_address,
-            INT_PINS[i]);
+            INT_PINS[i]
+        );
     }
 }
 

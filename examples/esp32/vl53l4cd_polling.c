@@ -14,9 +14,6 @@
 #include "vl53l4cd_core.h"
 #include "vl53l4cd_platform.h"
 
-#include <stdint.h>
-#include <stdio.h>
-
 #define I2C_DEFAULT_ADDRESS 0x29 // Indirizzo I2C di default
 #define I2C_PORT I2C_NUM_0       // Numero porta I2C
 #define I2C_PIN_SCL 10           // SCL
@@ -87,13 +84,19 @@ void app_main(void)
 
     // Configura la modalità di rilevamento specificata dalla window
     vl53l4cd_set_detection_thresholds(
-        &device, DETECTION_LOW_MM, DETECTION_HIGH_MM, DETECTION_WINDOW);
+        &device,
+        DETECTION_LOW_MM,
+        DETECTION_HIGH_MM,
+        DETECTION_WINDOW
+    );
 
-    ESP_LOGI(TAG,
+    ESP_LOGI(
+        TAG,
         "Detection range: [%u, %u] mm | Mode: %u",
         DETECTION_LOW_MM,
         DETECTION_HIGH_MM,
-        DETECTION_WINDOW);
+        DETECTION_WINDOW
+    );
 
     // Avvia le misurazioni
     vl53l4cd_start_ranging(&device);
@@ -113,11 +116,13 @@ void app_main(void)
         vl53l4cd_err_t status = vl53l4cd_get_result(&device, &result);
 
         if (status == VL53L4CD_ERR_OK && result.range_status == 0)
-            ESP_LOGI(TAG,
+            ESP_LOGI(
+                TAG,
                 "[0x%02X] Distance: %6u mm | Signal: %6u",
                 device.i2c_address,
                 result.distance_mm,
-                result.signal_per_spad_kcps);
+                result.signal_per_spad_kcps
+            );
         else
             ESP_LOGD(TAG, "[0x%02X] Status: %u", device.i2c_address, result.range_status);
 

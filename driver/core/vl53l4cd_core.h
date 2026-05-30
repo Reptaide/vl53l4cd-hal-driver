@@ -17,22 +17,19 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
     typedef struct vl53l4cd_t vl53l4cd_t;
 
-    typedef enum
-    {
+    typedef enum {
         VL53L4CD_ERR_OK = 0,
         VL53L4CD_ERR_INVALID_ARG,
         VL53L4CD_ERR_FAIL,
         VL53L4CD_ERR_TIMEOUT,
     } vl53l4cd_err_t;
 
-    typedef enum
-    {
+    typedef enum {
         VL53L4CD_LOG_ERROR = 0,
         VL53L4CD_LOG_WARNING,
         VL53L4CD_LOG_INFO,
@@ -45,9 +42,17 @@ extern "C"
      * L'implementazione di queste funzioni spetta allo sviluppatore in base al tipo di platform.
      */
     typedef vl53l4cd_err_t (*vl53l4cd_read_register_t)(
-        void *handle, const uint16_t reg, const size_t length, uint8_t *data);
+        void *handle,
+        const uint16_t reg,
+        const size_t length,
+        uint8_t *data
+    );
     typedef vl53l4cd_err_t (*vl53l4cd_write_register_t)(
-        void *handle, const uint16_t reg, const size_t length, const uint8_t *data);
+        void *handle,
+        const uint16_t reg,
+        const size_t length,
+        const uint8_t *data
+    );
     typedef vl53l4cd_err_t (*vl53l4cd_update_address_t)(void *handle, const uint8_t address);
     typedef vl53l4cd_err_t (*vl53l4cd_gpio_set_level_t)(const uint8_t pin, const uint8_t level);
     typedef void (*vl53l4cd_time_delay_t)(const uint32_t ms);
@@ -59,8 +64,7 @@ extern "C"
      * è possibile risparmiare memoria RAM nel caso in cui si debbano utilizzare
      * più di un sensore.
      */
-    typedef struct
-    {
+    typedef struct {
         vl53l4cd_read_register_t i2c_read;
         vl53l4cd_write_register_t i2c_write;
         vl53l4cd_update_address_t update_address;
@@ -71,8 +75,7 @@ extern "C"
     /**
      * @brief La struttura contiene i dati relativi ad ogni sensore.
      */
-    struct vl53l4cd_t
-    {
+    struct vl53l4cd_t {
         void *i2c_bus_handle;                // Handler del bus I2C
         void *i2c_device_handle;             // Handler dispositivo I2C
         uint8_t i2c_address;                 // Indirizzo I2C del dispositivo
@@ -88,8 +91,7 @@ extern "C"
     /**
      * @brief La struttura contiene i risulati delle letture del sensore.
      */
-    typedef struct
-    {
+    typedef struct {
         uint8_t range_status;           // Stato della misurazione (0 = dati validi)
         uint8_t number_of_spad;         // Numero degli SPAD attivati (la parte LSB è esclusa)
         uint16_t distance_mm;           // Distanza misurata in mm
@@ -201,7 +203,10 @@ extern "C"
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
     vl53l4cd_err_t vl53l4cd_get_range_timing(
-        vl53l4cd_t *device, uint32_t *timing_budget_ms, uint32_t *inter_measurement_ms);
+        vl53l4cd_t *device,
+        uint32_t *timing_budget_ms,
+        uint32_t *inter_measurement_ms
+    );
 
     /**
      * @brief Imposta l'intervallo di temporizzazione, il quale è composto da:
@@ -219,7 +224,10 @@ extern "C"
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
     vl53l4cd_err_t vl53l4cd_set_range_timing(
-        vl53l4cd_t *device, const uint32_t timing_budget_ms, const uint32_t inter_measurement_ms);
+        vl53l4cd_t *device,
+        const uint32_t timing_budget_ms,
+        const uint32_t inter_measurement_ms
+    );
 
     /**
      * @brief Ottiene i dati risultanti dalla misurazione.
@@ -288,7 +296,11 @@ extern "C"
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
     vl53l4cd_err_t vl53l4cd_get_detection_thresholds(
-        vl53l4cd_t *device, uint16_t *low_dist_mm, uint16_t *high_dist_mm, uint8_t *window);
+        vl53l4cd_t *device,
+        uint16_t *low_dist_mm,
+        uint16_t *high_dist_mm,
+        uint8_t *window
+    );
 
     /**
      * @brief Imposta la soglia inferiore e superiore di rilevamento. Possono generare un interrupt
@@ -302,10 +314,12 @@ extern "C"
      * @retval VL53L4CD_ERR_OK          Successo.
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
-    vl53l4cd_err_t vl53l4cd_set_detection_thresholds(vl53l4cd_t *device,
+    vl53l4cd_err_t vl53l4cd_set_detection_thresholds(
+        vl53l4cd_t *device,
         const uint16_t low_dist_mm,
         const uint16_t high_dist_mm,
-        const uint8_t window);
+        const uint8_t window
+    );
 
     /**
      * @brief Ottiene la soglia del segnale in kcps. Se il target ha un segnale inferiore alla
@@ -401,7 +415,10 @@ extern "C"
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
     vl53l4cd_err_t vl53l4cd_set_isr_handler(
-        vl53l4cd_t *device, vl53l4cd_isr_handler_t handler, void *context);
+        vl53l4cd_t *device,
+        vl53l4cd_isr_handler_t handler,
+        void *context
+    );
 
     /**
      * @brief Esegue una calibrazione dell'offset. Il quale corrisponde alla differenza in
@@ -416,10 +433,12 @@ extern "C"
      * @retval VL53L4CD_ERR_OK          Successo.
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
-    vl53l4cd_err_t vl53l4cd_calibrate_offset(vl53l4cd_t *device,
+    vl53l4cd_err_t vl53l4cd_calibrate_offset(
+        vl53l4cd_t *device,
         const int16_t target_dist_mm,
         const uint8_t nb_samples,
-        int16_t *p_measured_offset_mm);
+        int16_t *p_measured_offset_mm
+    );
 
     /**
      * @brief Esegue una calibrazione Xtalk. Il quale rappresenta la correzione da applicare al
@@ -433,10 +452,12 @@ extern "C"
      * @retval VL53L4CD_ERR_OK          Successo.
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      */
-    vl53l4cd_err_t vl53l4cd_calibrate_xtalk(vl53l4cd_t *device,
+    vl53l4cd_err_t vl53l4cd_calibrate_xtalk(
+        vl53l4cd_t *device,
         const int16_t target_dist_mm,
         const uint8_t nb_samples,
-        uint16_t *measured_xtalk_kcps);
+        uint16_t *measured_xtalk_kcps
+    );
 
     /**
      * @brief Esegue una calibrazione del dispositivo. Va fatta quando la temperatura cambia di

@@ -14,8 +14,7 @@
 #include "vl53l4cd_core.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
     /**
@@ -30,11 +29,13 @@ extern "C"
      * @retval VL53L4CD_ERR_INVALID_ARG Parametri non validi.
      * @retval VL53L4CD_ERR_FAIL        Errore nella configurazione dell'ISR o del pin.
      */
-    vl53l4cd_err_t vl53l4cd_init_hal(vl53l4cd_t *device,
+    vl53l4cd_err_t vl53l4cd_init_hal(
+        vl53l4cd_t *device,
         i2c_master_bus_handle_t bus_handle,
         const uint8_t i2c_address,
         const uint32_t i2c_scl_speed,
-        const int32_t i2c_timeout);
+        const int32_t i2c_timeout
+    );
 
     /**
      * @brief Configura il pin di alimentazione del dispositivo.

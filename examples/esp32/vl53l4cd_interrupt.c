@@ -73,11 +73,13 @@ void vl53l4cd_task(void *arg)
         status = vl53l4cd_get_result(device, &result);
 
         if (status == VL53L4CD_ERR_OK && result.range_status == 0)
-            ESP_LOGI(TAG,
+            ESP_LOGI(
+                TAG,
                 "[%p] Distance: %6u, Signal: %6u",
                 device,
                 result.distance_mm,
-                result.signal_per_spad_kcps);
+                result.signal_per_spad_kcps
+            );
         else
             ESP_LOGD(TAG, "[%p] Status: %u", device, result.range_status);
 
